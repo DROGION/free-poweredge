@@ -1,24 +1,37 @@
-name: SSH with tmate
+name: Setup
 
-on: 
-  workflow_dispatch: # Allow manual triggering of the workflow
+on: [push]
 
 jobs:
-  ssh-session:
+  setup-rdp:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Set up tmate session
+    - name: Install XFCE 
       run: |
         sudo apt-get update
-        sudo apt-get install -y tmate
-        tmate -S /tmp/tmate.sock new-session -d
-        tmate -S /tmp/tmate.sock wait tmate-ready
-        tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}'
-        tmate -S /tmp/tmate.sock display -p '#{tmate_web}'
-    - name: Keep tmate session alive
+        sudo apt-get install -y xfce4 xfce4-goodies xorg dbus-x11 x11-xserver-utils
+        sudo apt-get install -y xrdp
+        sudo systemctl enable xrdp
+
+    - name: Configure XFCE
       run: |
-        while true; do sleep 1; done
+        echo "xfce4-session" > ~/.xsession
+        sudo sed -i 's/3389/3390/g' /etc/xrdp/xrdp.ini
+        sudo service xrdp restart
+
+    - name: Set up XFCE user
+      run: |
+        sudo useradd -m rdpuser -s /bin/bash
+        echo 'rdpuser:rdppassword' | sudo chpasswd
+        sudo adduser rdpuser sudo
+
+    - name: Print connection details
+      run: |
+        echo "Connect to the RDP server using the following details:"
+        echo "Server IP: $(curl -s ifconfig.me)"
+        echo "Port: 3390"
+        echo "Username: rdpuser"
+        echo "Password: rdppassword"
