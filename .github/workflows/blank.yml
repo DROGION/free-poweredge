@@ -1,37 +1,33 @@
-name: Setup
+name: GitHub Actions
 
-on: [push]
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
-  setup-rdp:
+  rdp:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Update and Install XFCE 
+        run: |
+          sudo apt update && sudo apt install -y xfce4 xfce4-goodies xrdp
+          sudo systemctl enable xrdp
+          sudo systemctl start xrdp
 
-    - name: Install XFCE 
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y xfce4 xfce4-goodies xorg dbus-x11 x11-xserver-utils
-        sudo apt-get install -y xrdp
-        sudo systemctl enable xrdp
+      - name: Create User and Set Password
+        run: |
+          sudo useradd -m githubrdp
+          echo 'githubrdp:password123' | sudo chpasswd
+          sudo usermod -aG sudo githubrdp
 
-    - name: Configure XFCE
-      run: |
-        echo "xfce4-session" > ~/.xsession
-        sudo sed -i 's/3389/3390/g' /etc/xrdp/xrdp.ini
-        sudo service xrdp restart
+      - name: Get Public IP
+        run: |
+          sleep 30
+          curl -s ifconfig.me
+          echo "Use the above IP to connect via RDP with username 'githubrdp' and password 'password123'."
 
-    - name: Set up XFCE user
-      run: |
-        sudo useradd -m rdpuser -s /bin/bash
-        echo 'rdpuser:rdppassword' | sudo chpasswd
-        sudo adduser rdpuser sudo
-
-    - name: Print connection details
-      run: |
-        echo "Connect to the RDP server using the following details:"
-        echo "Server IP: $(curl -s ifconfig.me)"
-        echo "Port: 3390"
-        echo "Username: rdpuser"
-        echo "Password: rdppassword"
+      - name: Keep Session Alive
+        run: |
+          while true; do sleep 600; done
